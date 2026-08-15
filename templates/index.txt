@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ SAT System Command Center Enterprise</title>
+    <!-- Tailwind CSS CDN & Inter Font -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', 'Sarabun', sans-serif; background-color: #060A12; color: #F8FAFC; }
+        .frame-red { background: #0A1120; border: 2px solid #EF4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.25); }
+        .frame-blue { background: #0A1120; border: 2px solid #0284C7; box-shadow: 0 0 12px rgba(2, 132, 199, 0.25); }
+        .frame-green { background: #0A1120; border: 2px solid #10B981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.25); }
+        .frame-orange { background: #0A1120; border: 2px solid #F59E0B; box-shadow: 0 0 12px rgba(245, 158, 11, 0.25); }
+        .kpi-panel { background: #0A1120; border: 1px solid #1E293B; }
+    </style>
+</head>
+<body class="min-h-screen p-2 select-none">
+
+    <!-- ⚠️ Offline Alert Banner -->
+    <div id="offline-banner" class="hidden mb-2 p-2 bg-amber-950/80 border border-amber-500 text-amber-300 text-xs font-bold rounded flex items-center justify-between animate-pulse">
+        <span>⚠️ คุณกำลังทำงานในโหมดออฟไลน์ (Offline Cache Mode) ข้อมูลอาจยังไม่ได้ซิงค์ล่าสุดกับ Google Sheets</span>
+        <button onclick="fetchDatabase()" class="underline hover:text-white">ลองเชื่อมต่อใหม่</button>
+    </div>
+
+    <!-- 🔒 Login Modal -->
+    <div id="login-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-[#0A1120] border-2 border-sky-500 p-6 rounded-xl w-96 shadow-[0_0_25px_rgba(2,132,199,0.4)]">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="text-2xl">⚡</span>
+                <h2 class="text-lg font-black text-sky-400">SAT SYSTEM COMMAND CENTER</h2>
+            </div>
+            <p class="text-xs text-slate-400 mb-4 font-semibold">กรุณายืนยันตัวตน (User จาก Google Sheets)</p>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-[11px] font-bold text-sky-400 block mb-1">USERNAME</label>
+                    <input id="login-user" type="text" class="w-full bg-[#0F172A] border border-slate-700 rounded px-3 py-1.5 text-sm font-bold text-white focus:border-sky-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-[11px] font-bold text-sky-400 block mb-1">PASSWORD</label>
+                    <input id="login-pass" type="password" class="w-full bg-[#0F172A] border border-slate-700 rounded px-3 py-1.5 text-sm font-bold text-white focus:border-sky-500 focus:outline-none">
+                </div>
+                <div id="login-err" class="text-xs text-red-500 font-bold hidden"></div>
+                <button onclick="handleLogin()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-extrabold py-2 rounded transition shadow-lg mt-2">LOGIN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Command Bar -->
+    <header class="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <div class="bg-[#0A1120] border border-slate-800 rounded px-3 py-1.5 flex items-center gap-2">
+            <span class="text-sky-400 font-black tracking-wider text-sm">⚡ SAT SYSTEM COMMAND CENTER</span>
+            <span id="user-badge" class="bg-sky-950 text-sky-400 text-xs px-2 py-0.5 rounded font-bold border border-sky-800"></span>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <input id="test-date" type="text" value="13-Jul-2026" class="bg-[#0F172A] border border-slate-700 text-xs font-bold px-2 py-1.5 rounded w-28 text-center text-white">
+            <input id="revision" type="text" value="R0" class="bg-[#0F172A] border border-slate-700 text-xs font-bold px-2 py-1.5 rounded w-16 text-center text-white">
+            <button onclick="exportReport('word')" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-black px-4 py-1.5 rounded border border-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.4)]">🗳️ Export Word</button>
+            <button onclick="exportReport('pdf')" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-black px-4 py-1.5 rounded border border-amber-400">🍺 Export PDF</button>
+            <button onclick="logout()" class="bg-red-950 hover:bg-red-900 text-red-400 text-xs font-bold px-3 py-1.5 rounded border border-red-800">Logout</button>
+        </div>
+    </header>
+
+    <!-- Filters Row -->
+    <div class="grid grid-cols-3 gap-2 mb-2">
+        <select id="sel-topic" onchange="onTopicChange()" class="bg-[#0F172A] border border-slate-700 text-xs font-bold text-sky-400 p-1.5 rounded"></select>
+        <select id="sel-phase" onchange="onPhaseChange()" class="bg-[#0F172A] border border-slate-700 text-xs font-bold text-sky-400 p-1.5 rounded"></select>
+        <select id="sel-room" onchange="onRoomChange()" class="bg-[#0F172A] border border-slate-700 text-xs font-bold text-sky-400 p-1.5 rounded"></select>
+    </div>
+
+    <!-- Analytics Dashboard Panels -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
+        <!-- Room Status (Red Frame) -->
+        <div class="frame-red rounded-lg p-3 flex flex-col justify-between items-center h-28">
+            <div class="flex items-baseline gap-2">
+                <span id="txt-room-total" class="text-4xl font-black text-white leading-none">0</span>
+                <span class="text-xs font-bold text-slate-400">Rooms</span>
+            </div>
+            <div class="flex justify-between w-full text-[11px] font-bold">
+                <span class="text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded">🟢 <span id="txt-room-done">0</span> Complete</span>
+                <span class="text-red-400 bg-red-950/40 px-2 py-0.5 rounded">🔴 <span id="txt-room-pending">0</span> Pending</span>
+            </div>
+        </div>
+
+        <!-- Cabinet Status (Red Frame) -->
+        <div class="frame-red rounded-lg p-3 flex flex-col justify-between items-center h-28">
+            <div class="flex items-baseline gap-2">
+                <span id="txt-cab-total" class="text-4xl font-black text-white leading-none">0</span>
+                <span class="text-xs font-bold text-slate-400">Cabinets</span>
+            </div>
+            <div class="flex justify-between w-full text-[11px] font-bold">
+                <span class="text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded">🟢 <span id="txt-cab-done">0</span> Complete</span>
+                <span class="text-red-400 bg-red-950/40 px-2 py-0.5 rounded">🔴 <span id="txt-cab-pending">0</span> Pending</span>
+            </div>
+        </div>
+
+        <!-- Completion Matrix (Blue Frame) -->
+        <div class="frame-blue rounded-lg p-2.5 h-28 col-span-2 overflow-y-auto text-xs">
+            <div class="font-black text-sky-400 mb-1">DATA COMPLETION MATRIX</div>
+            <div id="matrix-container" class="space-y-1 text-[11px] font-bold text-slate-300"></div>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <main class="bg-[#0A1120] border border-slate-800 rounded-lg p-3">
+        <!-- Cabinet Selector Buttons -->
+        <div class="mb-3">
+            <div class="text-xs font-bold text-sky-400 mb-1.5">Select Cabinet Unit:</div>
+            <div id="cab-btn-container" class="flex flex-wrap gap-1.5"></div>
+        </div>
+
+        <!-- Subject Panels Container -->
+        <div id="subjects-container" class="space-y-2"></div>
+    </main>
+
+    <script>
+        let DB = {};
+        let currentUser = localStorage.getItem("sat_user") || "";
+
+        // On Page Load
+        window.onload = () => {
+            if (currentUser) {
+                document.getElementById('login-modal').classList.add('hidden');
+                document.getElementById('user-badge').innerText = `👤 ${currentUser}`;
+                fetchDatabase();
+            }
+        };
+
+        async function handleLogin() {
+            const u = document.getElementById('login-user').value;
+            const p = document.getElementById('login-pass').value;
+            const err = document.getElementById('login-err');
+            
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem("sat_user", data.user);
+                    currentUser = data.user;
+                    document.getElementById('login-modal').classList.add('hidden');
+                    document.getElementById('user-badge').innerText = `👤 ${currentUser}`;
+                    if (data.is_offline) document.getElementById('offline-banner').classList.remove('hidden');
+                    fetchDatabase();
+                } else {
+                    err.innerText = data.message || "Invalid Login";
+                    err.classList.remove('hidden');
+                }
+            } catch (e) {
+                err.innerText = "Connection error";
+                err.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("sat_user");
+            location.reload();
+        }
+
+        async function fetchDatabase() {
+            try {
+                const res = await fetch('/api/database');
+                const result = await res.json();
+                if (result.success) {
+                    DB = result.data;
+                    if (result.is_offline) {
+                        document.getElementById('offline-banner').classList.remove('hidden');
+                    } else {
+                        document.getElementById('offline-banner').classList.add('hidden');
+                    }
+                    populateFilters();
+                }
+            } catch (e) {
+                document.getElementById('offline-banner').classList.remove('hidden');
+            }
+        }
+
+        function populateFilters() {
+            const dataSheet = DB['Data'] || [];
+            if (dataSheet.length < 2) return;
+            
+            const selTopic = document.getElementById('sel-topic');
+            selTopic.innerHTML = "";
+            for (let i = 1; i < dataSheet.length; i++) {
+                if (dataSheet[i][0]) selTopic.innerHTML += `<option value="${dataSheet[i][0]}">${dataSheet[i][0]}</option>`;
+            }
+            onTopicChange();
+        }
+
+        function onTopicChange() {
+            // ดึง Sheet Equipment ตาม Topic
+            const selTopic = document.getElementById('sel-topic').value;
+            const dataSheet = DB['Data'] || [];
+            let eqSheetName = "Equipment";
+            for (let i = 1; i < dataSheet.length; i++) {
+                if (dataSheet[i][0] === selTopic && dataSheet[i][3]) eqSheetName = dataSheet[i][3];
+            }
+
+            const eqRows = DB[eqSheetName] || [];
+            const phases = [...new Set(eqRows.slice(1).map(r => r[0]).filter(Boolean))];
+            
+            const selPhase = document.getElementById('sel-phase');
+            selPhase.innerHTML = phases.map(p => `<option value="${p}">${p}</option>`).join('');
+            onPhaseChange();
+        }
+
+        function onPhaseChange() {
+            const selTopic = document.getElementById('sel-topic').value;
+            const selPhase = document.getElementById('sel-phase').value;
+            const dataSheet = DB['Data'] || [];
+            let eqSheetName = "Equipment";
+            for (let i = 1; i < dataSheet.length; i++) {
+                if (dataSheet[i][0] === selTopic && dataSheet[i][3]) eqSheetName = dataSheet[i][3];
+            }
+
+            const eqRows = DB[eqSheetName] || [];
+            const rooms = [...new Set(eqRows.slice(1).filter(r => r[0] === selPhase).map(r => r[1]).filter(Boolean))];
+            
+            const selRoom = document.getElementById('sel-room');
+            selRoom.innerHTML = rooms.map(r => `<option value="${r}">${r}</option>`).join('');
+            onRoomChange();
+        }
+
+        function onRoomChange() {
+            renderCabinetsAndSubjects();
+        }
+
+        function renderCabinetsAndSubjects() {
+            const selTopic = document.getElementById('sel-topic').value;
+            const selPhase = document.getElementById('sel-phase').value;
+            const selRoom = document.getElementById('sel-room').value;
+            
+            const dataSheet = DB['Data'] || [];
+            let eqSheetName = "Equipment", subjSheetName = "Subject";
+            for (let i = 1; i < dataSheet.length; i++) {
+                if (dataSheet[i][0] === selTopic) {
+                    subjSheetName = dataSheet[i][2] || "Subject";
+                    eqSheetName = dataSheet[i][3] || "Equipment";
+                }
+            }
+
+            const eqRows = DB[eqSheetName] || [];
+            const activeCabs = eqRows.slice(1).filter(r => r[0] === selPhase && r[1] === selRoom).map(r => r[2]);
+            
+            // อัปเดตสถิติตัวเลข Dashboard
+            document.getElementById('txt-room-total').innerText = "1";
+            document.getElementById('txt-room-done').innerText = "1";
+            document.getElementById('txt-cab-total').innerText = activeCabs.length;
+            document.getElementById('txt-cab-done').innerText = activeCabs.length;
+
+            // Render ปุ่ม Cabinet
+            const btnContainer = document.getElementById('cab-btn-container');
+            btnContainer.innerHTML = activeCabs.map((cab, idx) => `
+                <button onclick="setActiveCabinet('${cab}')" class="bg-[#0F172A] hover:bg-sky-600 text-sky-400 hover:text-white border border-slate-700 px-3 py-1 rounded text-xs font-bold transition">
+                    ${cab.split('-').length >= 3 ? cab.split('-')[cab.split('-').length - 3] : cab}
+                </button>
+            `).join('');
+
+            // Render Subjects
+            const subjRows = DB[subjSheetName] || [];
+            const subContainer = document.getElementById('subjects-container');
+            subContainer.innerHTML = subjRows.slice(1).map(s => `
+                <div class="border border-slate-800 bg-[#0F172A]/60 rounded-lg p-2.5">
+                    <div class="text-xs font-extrabold text-sky-300 mb-2">Subject ${s[0]}: ${s[1]}</div>
+                    <div class="grid grid-cols-4 gap-2">
+                        <label class="border-2 border-dashed border-sky-800 hover:border-sky-500 rounded-lg flex flex-col items-center justify-center p-3 cursor-pointer transition">
+                            <span class="text-xs text-sky-400 font-bold">+ Upload S${s[0]}</span>
+                            <input type="file" multiple class="hidden" onchange="handleFileUpload(event, ${s[0]})">
+                        </label>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function handleFileUpload(event, subjectNum) {
+            const files = event.target.files;
+            if (!files.length) return;
+            
+            const selTopic = document.getElementById('sel-topic').value;
+            const selPhase = document.getElementById('sel-phase').value;
+            const selRoom = document.getElementById('sel-room').value;
+            
+            for (let file of files) {
+                const fd = new FormData();
+                fd.append("topic", selTopic);
+                fd.append("phase", selPhase);
+                fd.append("room", selRoom);
+                fd.append("eq", "A1");
+                fd.append("subject", subjectNum);
+                fd.append("file", file);
+                
+                await fetch('/api/upload', { method: 'POST', body: fd });
+            }
+            alert(`Uploaded ${files.length} photos successfully!`);
+        }
+
+        async function exportReport(type) {
+            alert(`กำลังประมวลผลรายงาน ${type.toUpperCase()}... ไฟล์จะเริ่มดาวน์โหลดโดยอัตโนมัติ`);
+            const selTopic = document.getElementById('sel-topic').value;
+            const selPhase = document.getElementById('sel-phase').value;
+            const selRoom = document.getElementById('sel-room').value;
+            
+            const payload = {
+                topic: selTopic, phase: selPhase, room: selRoom,
+                test_date: document.getElementById('test-date').value,
+                revision: document.getElementById('revision').value,
+                user: currentUser
+            };
+
+            const res = await fetch('/api/export/word', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `SAT_Report_${selTopic}_${selRoom}.docx`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } else {
+                alert("Export Failed: Template not found or data error");
+            }
+        }
+    </script>
+</body>
+</html>
