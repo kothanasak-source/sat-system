@@ -15,7 +15,7 @@ from PIL import Image, ImageOps
 # -------------------------------------------------------------------
 # ⚙️ วาง Web App URL (Google Apps Script) ที่นี่
 # -------------------------------------------------------------------
-APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyovncjGanRbNjUjLtQNZb_MKIwFrvovGkxeDUXr_tYYcnEVe6nXWxPt-J6RV7mHJ-8Qw/exec"
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxMrMmmw8lnqf58BFKSOycGq75CZXpJefDXxZl86BX3NIe5F-RyH8O8YHwynfU3RrzsUg/exec"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CACHE_DIR = os.path.join(BASE_DIR, "cache")
